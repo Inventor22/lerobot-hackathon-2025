@@ -6,32 +6,24 @@ from typing import Dict, Tuple
 
 import cv2, numpy as np
 
-from ...common.cameras import make_cameras_from_configs
-from ...common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
-from ...common.teleoperators import Teleoperator
-from .corexy_stylus_teleop_config import CoreXYStylusTeleopConfig
+from lerobot.common.cameras import make_cameras_from_configs
+from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+
+from lerobot.common.teleoperators import Teleoperator
+from .config_corexy_leader import CoreXYLeaderConfig
 
 logger = logging.getLogger(__name__)
 
 
-class CoreXYStylusTeleop(Teleoperator):
+class CoreXYLeader(Teleoperator):
     """
     Streams the iPad HDMI feed, lets a user click in the window, and converts
     pixel positions into (x_mm, y_mm, tap) actions.
     """
-    config_class = CoreXYStylusTeleopConfig
-    name         = "corexy_stylus_teleop"
+    config_class = CoreXYLeaderConfig
+    name         = "corexy_leader"
 
-    # ── interface spec ──────────────────────────────────────────────────────
-    def action_features(self) -> Dict[str, type]:
-        return {"x": float, "y": float, "tap": int}
-
-    @property
-    def feedback_features(self) -> Dict[str, type]:
-        return {}
-
-    # ── init ───────────────────────────────────────────────────────────────
-    def __init__(self, config: CoreXYStylusTeleopConfig):
+    def __init__(self, config: CoreXYLeaderConfig):
         super().__init__(config)
         self.config   = config
         self.cameras  = make_cameras_from_configs(config.cameras)
@@ -47,7 +39,13 @@ class CoreXYStylusTeleop(Teleoperator):
         self._is_connected  = False
         self._is_calibrated = False
 
-    # ── status props ────────────────────────────────────────────────────────
+    def action_features(self) -> dict[str, type]:
+        return {"x": float, "y": float, "tap": int}
+
+    @property
+    def feedback_features(self) -> dict[str, type]:
+        return {}
+    
     @property
     def is_connected(self) -> bool:
         return self._is_connected and all(cam.is_connected for cam in self.cameras.values())
@@ -56,11 +54,6 @@ class CoreXYStylusTeleop(Teleoperator):
     def is_calibrated(self) -> bool:
         return self._is_calibrated
 
-    # teleop doesn’t need calibration
-    def calibrate(self) -> None: self._is_calibrated = True
-    def configure(self) -> None: pass
-
-    # ── connect / disconnect ───────────────────────────────────────────────
     def connect(self, calibrate: bool = False) -> None:
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} already connected")
@@ -83,6 +76,10 @@ class CoreXYStylusTeleop(Teleoperator):
         threading.Thread(target=self._gui_loop, daemon=True).start()
 
         logger.info("%s connected.", self)
+
+    # teleop doesn’t need calibration
+    def calibrate(self) -> None: self._is_calibrated = True
+    def configure(self) -> None: pass
 
     def disconnect(self) -> None:
         # if not self.is_connected:

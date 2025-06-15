@@ -5,17 +5,14 @@ from typing import Dict
 
 import cv2
 
-from ...common.cameras import CameraConfig, ColorMode
-from ...common.cameras.opencv import OpenCVCameraConfig
-from ...common.robots import RobotConfig
+from ...cameras import CameraConfig, ColorMode
+from ...cameras.opencv import OpenCVCameraConfig
+from ..config import TeleoperatorConfig
 
 
-@RobotConfig.register_subclass("corexy_stylus_teleop")
+@TeleoperatorConfig.register_subclass("corexy_leader")
 @dataclass
-class CoreXYStylusTeleopConfig(RobotConfig):
-    """
-    Config for the Core-XY stylus teleoperator.
-    """
+class CoreXYLeaderConfig(TeleoperatorConfig):
     cameras: Dict[str, CameraConfig] = field(
         default_factory=lambda: {
             "ipad_hdmi": OpenCVCameraConfig(
@@ -30,4 +27,4 @@ class CoreXYStylusTeleopConfig(RobotConfig):
     )
     bed_width_mm: float = 260.0
     bed_height_mm: float = 198.0
-    window_name: str = "CoreXY Teleop"
+    window_name: str = "corexy_leader"
