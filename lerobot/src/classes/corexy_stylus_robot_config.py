@@ -1,4 +1,4 @@
-# lerobot/src/classes/corexy_stylus_config.py
+# lerobot/src/classes/corexy_stylus_robot_config.py
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -6,14 +6,14 @@ from typing import Dict
 
 import cv2
 
-from ....lerobot.common.cameras import CameraConfig
-from ....lerobot.common.cameras.opencv import OpenCVCameraConfig
-from ....lerobot.common.robots import RobotConfig
+from ...common.cameras import CameraConfig
+from ...common.cameras.opencv import OpenCVCameraConfig
+from ...common.robots import RobotConfig
 
 
-@RobotConfig.register_subclass("corexy_stylus_robot")
+@RobotConfig.register_subclass("corexy_stylus_robot_config")
 @dataclass
-class CoreXYStylusConfig(RobotConfig):
+class CoreXYStylusRobotConfig(RobotConfig):
     """Config dataclass for the Core-XY stylus rig."""
     port: str = "COM5"
     bed_width_mm: float = 260.0   # X travel

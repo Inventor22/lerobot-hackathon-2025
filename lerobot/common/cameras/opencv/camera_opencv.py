@@ -121,10 +121,11 @@ class OpenCVCamera(Camera):
         self.new_frame_event: Event = Event()
 
         self.rotation: int | None = get_cv2_rotation(config.rotation)
-        self.backend: int = get_cv2_backend() if config.backend is None else cv2.CAP_DSHOW
+        self.backend: int = get_cv2_backend(config.backend)
 
         if self.height and self.width:
             self.capture_width, self.capture_height = self.width, self.height
+            print(f"SETTING capture_width: {self.capture_width}, capture_height: {self.capture_height}")
             if self.rotation in [cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE]:
                 self.capture_width, self.capture_height = self.height, self.width
 
@@ -166,6 +167,8 @@ class OpenCVCamera(Camera):
             )
 
         self._configure_capture_settings()
+        #self.videocapture.set(cv2.CAP_PROP_FRAME_WIDTH,  1920)
+        #self.videocapture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
         if warmup:
             start_time = time.time()
@@ -227,6 +230,9 @@ class OpenCVCamera(Camera):
 
         width_success = self.videocapture.set(cv2.CAP_PROP_FRAME_WIDTH, float(self.capture_width))
         height_success = self.videocapture.set(cv2.CAP_PROP_FRAME_HEIGHT, float(self.capture_height))
+
+        print(f"width: {self.capture_width}, height: {self.capture_height}")
+        print(f"width_success: {width_success}, height_success: {height_success}")
 
         actual_width = int(round(self.videocapture.get(cv2.CAP_PROP_FRAME_WIDTH)))
         if not width_success or self.capture_width != actual_width:

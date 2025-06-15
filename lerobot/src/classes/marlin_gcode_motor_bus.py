@@ -41,7 +41,7 @@ class MarlinGCodeMotorBus:
                 break
 
     # ── public API ───────────────────────────────────────────────────────────
-    def send_command(self, gcode: str) -> None:
+    def write(self, gcode: str) -> None:
         assert self.is_connected and self.ser
         self.ser.write(f"{gcode}\n".encode())
         self._await_ok()

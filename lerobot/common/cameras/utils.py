@@ -56,8 +56,11 @@ def get_cv2_rotation(rotation: Cv2Rotation) -> int | None:
         return None
 
 
-def get_cv2_backend() -> int:
+def get_cv2_backend(backend: int | None) -> int:
     import cv2
+
+    if backend is not None:
+        return backend
 
     if platform.system() == "Windows":
         return cv2.CAP_AVFOUNDATION

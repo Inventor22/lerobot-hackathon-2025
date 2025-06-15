@@ -4,32 +4,32 @@ from __future__ import annotations
 import time
 from typing import Any, Dict
 
-from ....lerobot.common.cameras import make_cameras_from_configs
-from ....lerobot.common.robots import Robot
+from lerobot.common.cameras import make_cameras_from_configs
+from lerobot.common.robots import Robot
 
 from .marlin_gcode_motor_bus import MarlinGCodeMotorBus
-from .corexy_stylus_config import CoreXYStylusConfig
+from .corexy_stylus_robot_config import CoreXYStylusRobotConfig
 
 import cv2
 import numpy as np
 
 
-class CoreXYStylus(Robot):
+class CoreXYStylusRobot(Robot):
     """
     LeRobot-compatible wrapper around the Core-XY iPad tapping rig.
-    Action:  {'x': int, 'y': int, 'tap': int}
-    Obs:     {'x': int, 'y': int}
+    Action:  {'x': float, 'y': float, 'tap': float}
+    Obs:     {'x': float, 'y': float}
     """
 
-    config_class = CoreXYStylusConfig
+    config_class = CoreXYStylusRobotConfig
     name = "corexy_stylus_robot"
 
     # ── init / connection ────────────────────────────────────────────────────
-    def __init__(self, config: CoreXYStylusConfig):
+    def __init__(self, config: CoreXYStylusRobotConfig):
         super().__init__(config)
         self.bus = MarlinGCodeMotorBus(port=config.port)
         self.cameras = make_cameras_from_configs(config.cameras)
-        self._last_action: Dict[str, int] = {"x": 0, "y": 0}
+        self._last_action: Dict[str, Any] = {"x": 0.0, "y": 0.0, "tap": 0}
         self._calibrated: bool = False
 
     @property
@@ -54,8 +54,8 @@ class CoreXYStylus(Robot):
     @property
     def _motors_ft(self) -> dict[str, type]:
         return {
-            "x": int,
-            "y": int,
+            "x": float,
+            "y": float,
             "tap": int,
         }
 
@@ -72,9 +72,6 @@ class CoreXYStylus(Robot):
     @property
     def is_calibrated(self) -> bool:
         return self._calibrated
-
-    # def action_features(self) -> Dict[str, type]:
-    #     return {"x": int, "y": int, "tap": int}
 
     def action_features(self) -> dict:
         return self._motors_ft
@@ -97,16 +94,20 @@ class CoreXYStylus(Robot):
         return obs_dict
 
     def send_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        x = int(action["x"])
-        y = int(action["y"])
+        x = action["x"]
+        y = action["y"]
         tap = int(action.get("tap", 0))
+
+        # Convert normalized coords to mm
+        x = x * self.config.bed_width_mm
+        y = y * self.config.bed_height_mm
 
         # Clip to iPad screen dimensions
         x = max(0, min(x, self.config.bed_width_mm))
         y = max(0, min(y, self.config.bed_height_mm))
 
         # Move
-        self.move(x, y)
+        self._move(x, y)
 
         # Tap
         if tap:
@@ -118,13 +119,13 @@ class CoreXYStylus(Robot):
         return {"x": x, "y": y, "tap": tap}
     
     # Helper methods
-    def move(self, x: int, y: int, speed: int = 3000) -> None:
+    def _move(self, x: int, y: int, speed: int = 3000) -> None:
         self.bus.send_command(f"G0 X{x} Y{y} F{speed}")
 
-    def wait_for_move_complete(self) -> None:
+    def _wait_for_move_complete(self) -> None:
         self.bus.send_command("M400")
 
-    def tap(self, tap_time=300):
+    def _tap(self, tap_time=300):
         # solenoid on pin 41
         self.send_command('M42 P41 S255')
         time.sleep(tap_time / 1000)
@@ -142,14 +143,14 @@ class CoreXYStylus(Robot):
         self._calibrated = True
 
     def configure(self) -> None:
-        for cam in self.cameras.values():
-            # Remove black perimeter bars from iPad screen mirror
-            frame = cam.read()
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            thr = 20
-            ys, xs = np.where(gray > thr)
+        cam = next(iter(self.cameras.values()))
+        # Remove black perimeter bars from iPad screen mirror
+        frame = cam.read()
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        thr = 20
+        ys, xs = np.where(gray > thr)
 
-            y0, y1 = ys.min(), ys.max()
-            x0, x1 = xs.min(), xs.max()
-            self.roi = np.s_[y0:y1+1, x0:x1+1]
-            self.Hc, self.Wc = y1 - y0 + 1, x1 - x0 + 1
+        y0, y1 = ys.min(), ys.max()
+        x0, x1 = xs.min(), xs.max()
+        self.roi = np.s_[y0:y1+1, x0:x1+1]
+        self.Hc, self.Wc = y1 - y0 + 1, x1 - x0 + 1
